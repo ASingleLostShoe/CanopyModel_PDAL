@@ -6,11 +6,11 @@
     },
     {
         "type":"filters.expression",
-        "expression":"Classification == 1"
+        "expression":"Classification == 2"
     },
     {
         "type":"writers.gdal",
-        "filename":"test_dsm.tif",
+        "filename":"test_dtm.tif",
         "output_type":"idw",
         "gdaldriver":"GTiff",
         "resolution": 1,

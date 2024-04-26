@@ -19,7 +19,7 @@ def open_pipeline(pipeline_file):
         
 #takes the json pipelines as a list of dictionaries, inserts input and output filepaths, converts to a 
 #pdal pipeline object, and executes. outputs two .tif files (DTM and DSM) and returns their parent directory filepath. 
-def execute_pl(dtm_json = 'dtm.json', dsm_json = 'dsm.json'):
+def execute_pl(dtm_json = 'dtm.json', dsm_json = 'dsm.json', lidar_filepath = None):
         
         ## Add option to keep intermidiate files (dsm,dtm) ##
 
@@ -28,8 +28,10 @@ def execute_pl(dtm_json = 'dtm.json', dsm_json = 'dsm.json'):
 
         #Requests the user for input and output filepaths.
 
-        lidar_filepath = r'{}'.format(input('Enter path to LiDAR file: ').strip('"\''))
-        print()
+        if lidar_filepath == None:
+            lidar_filepath = r'{}'.format(input('Enter path to LiDAR file: ').strip('"\''))
+            print()
+            
         out_filepath = r'{}'.format(input('Enter the path to the folder for output files: ').strip('"\''))
         print()
 
@@ -79,30 +81,54 @@ def execute_pl(dtm_json = 'dtm.json', dsm_json = 'dsm.json'):
         return out_dtm,out_dsm,out_filepath
 
 # Generates CHM from derived DTM and DSM created in execute_pl
-def create_chm(dtm,dsm,out_name,out_filepath):
+def create_chm(dtm,dsm,out_filepath,out_name = None):
     #this function utilizes rasterio, a python library that allows the manipulation of rasters as numpy arrays.
+
 
     raster_destination = os.path.join(out_filepath,out_name) #output CHM location + file name
 
+    print('Consolidating georeferencing specifications...')
+    print('     opening reference raster...')
     raster_specs = rasterio.open(dtm) #opens dtm as a raster
+    print(f'    storing coordinate reference system for {out_name}.laz...')
     raster_crs = raster_specs.crs #stores the Coordinate reference System for dtm (will be the same for both dtm and dsm)
+    print(f'    storing transform for {out_name}.laz...')
     raster_transform = raster_specs.transform #stores the transform for dtm (will be the same for both dtm and dsm)
+    print('georeferencing specifications consolidated.')
+    print()
+
 
     #read stored dtm and dsm rasters (.tif format) into numpy arrays
+    print('reading dtm raster into numpy array...')
     raster_dtm = rasterio.open(dtm).read(1)
+    print('success.')
+    print()
+    print('reading dsm raster into numpy array...')
     raster_dsm = rasterio.open(dsm).read(1)
+    print('success.')
+    print()
 
     #create CHM using array arithmetic. CHM = DSM - DTM
+    print('subtracting dtm from dsm...')
     raster_chm = raster_dsm - raster_dtm
+    print('success.')
+    print()
 
     #mask null values, and values we don't want to include in our canopy.
     #all pixels with a value of less than 1.83 meters (6 feet) will be excuded from the out chm raster.
+    print('Identifying null values and small vegetation for exclusion...')
     mask_null = (raster_dsm == -10) | (raster_dtm == -10)
     mask_small = (raster_chm <1.83)
+    print('success.')
+    print()
+    print('applying mask to chm array...')
     raster_chm[mask_null] = 0
     raster_chm[mask_small] = 0
+    print('success.')
+    print()
 
     #writes the chm numpy array to a new geotiff file at the out_filepath location.
+    print(f'writing chm to GTiff raster format at {raster_destination}...')
     with rasterio.open(
          raster_destination,
          'w',
@@ -115,6 +141,36 @@ def create_chm(dtm,dsm,out_name,out_filepath):
          transform=raster_transform
     ) as dst:
          dst.write(raster_chm,1)
+         print('chm raster successfully produced.')
          dst.close
+         print('raster file connection closed.')
 
+#Returns a list of all files in a folder that use the .laz or .las extension.
+def identify_li_files():
+    
+    folderpath = r'{}'.format(input('Enter the path to the folder with files for processing: ').strip('"\''))
+    
+    print('Compilating LiDAR files in specified folder...')
+    #create list for filepaths to be appended to
+    laz_las_filelist = []
+
+    #for loop crawls files in directory at specified folder path. For any files that end with 
+    #'.laz' or '.las', the file path is appended to the filelist.
+    for file in os.listdir(folderpath):
+        if file.endswith('.laz') or file.endswith('.las'):
+            laz_las_filelist.append(os.path.join(folderpath,file))
+
+    file_count = len(laz_las_filelist)
+    
+    print(f'{file_count} files compilated.')
+    print()
+
+    return laz_las_filelist, file_count
+
+#strips file extension from a file name and replaces it with '_chm.tif' extension. Useful 
+#for giving output tifs the same name as input .laz files, and identifying they are output chm.   
+def chm_got_the_tif_bug(string):
+     string_no_file_extension = string.rsplit('.',1)
+     string_got_the_tif = string_no_file_extension + '_chm.tif'
+     return string_got_the_tif
 

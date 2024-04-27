@@ -19,7 +19,7 @@ def open_pipeline(pipeline_file):
         
 #takes the json pipelines as a list of dictionaries, inserts input and output filepaths, converts to a 
 #pdal pipeline object, and executes. outputs two .tif files (DTM and DSM) and returns their parent directory filepath. 
-def execute_pl(dtm_json = 'dtm.json', dsm_json = 'dsm.json', lidar_filepath = None):
+def execute_pl(dtm_json = 'dtm.json', dsm_json = 'dsm.json',out_filepath = None, lidar_filepath = None):
         
         ## Add option to keep intermidiate files (dsm,dtm) ##
 
@@ -31,9 +31,9 @@ def execute_pl(dtm_json = 'dtm.json', dsm_json = 'dsm.json', lidar_filepath = No
         if lidar_filepath == None:
             lidar_filepath = r'{}'.format(input('Enter path to LiDAR file: ').strip('"\''))
             print()
-            
-        out_filepath = r'{}'.format(input('Enter the path to the folder for output files: ').strip('"\''))
-        print()
+        if out_filepath == None:    
+            out_filepath = r'{}'.format(input('Enter the path to the folder for output files: ').strip('"\''))
+            print()
 
         ## ERROR HANDLING HERE ##
         
@@ -108,6 +108,11 @@ def create_chm(dtm,dsm,out_filepath,out_name = None):
     print('success.')
     print()
 
+    print('validating array shapes...')
+    raster_dtm_validated, raster_dsm_validated = check_array_sizes(raster_dtm,raster_dsm)
+    raster_dtm = raster_dtm_validated
+    raster_dsm = raster_dsm_validated
+
     #create CHM using array arithmetic. CHM = DSM - DTM
     print('subtracting dtm from dsm...')
     raster_chm = raster_dsm - raster_dtm
@@ -146,9 +151,10 @@ def create_chm(dtm,dsm,out_filepath,out_name = None):
          print('raster file connection closed.')
 
 #Returns a list of all files in a folder that use the .laz or .las extension.
-def identify_li_files():
-    
-    folderpath = r'{}'.format(input('Enter the path to the folder with files for processing: ').strip('"\''))
+def identify_li_files(folderpath=None):
+    if folderpath == None:
+        folderpath = r'{}'.format(input('Enter the path to the folder with files for processing: ').strip('"\''))
+
     
     print('Compilating LiDAR files in specified folder...')
     #create list for filepaths to be appended to
@@ -171,6 +177,39 @@ def identify_li_files():
 #for giving output tifs the same name as input .laz files, and identifying they are output chm.   
 def chm_got_the_tif_bug(string):
      string_no_file_extension = string.rsplit('.',1)
-     string_got_the_tif = string_no_file_extension + '_chm.tif'
+     string_got_the_tif = str(string_no_file_extension) + '_chm.tif'
      return string_got_the_tif
 
+#used to check that dsm and dtm are the same array shape after laoding into a numpy aray. 
+#Prevents errors in the subtraction portion of create_chm()
+def check_array_sizes(np1,np2):
+
+    # Find the difference in shape
+    diff_rows = np2.shape[0] - np1.shape[0]
+    diff_cols = np2.shape[1] - np1.shape[1]
+
+    # Add zero-value rows and columns to the smaller array
+    if diff_rows > 0:
+        zeros = np.zeros((diff_rows, np1.shape[1]))
+        np1 = np.vstack((np1, zeros))
+        print(f'dtm corrected by {diff_rows} rows.')
+
+    if diff_cols > 0:
+        zeros = np.zeros((np1.shape[0], diff_cols))
+        np1 = np.hstack((np1, zeros))
+        print(f'dtm corrected by {diff_cols} columns.')
+
+    if diff_rows < 0:
+        zeros = np.zeros((-diff_rows, np2.shape[1]))
+        np2 = np.vstack((np2, zeros))
+        print(f'dsm corrected by {-diff_rows} rows.')
+
+    if diff_cols < 0:
+        zeros = np.zeros((np2.shape[0], -diff_cols))
+        np2 = np.hstack((np2, zeros))
+        print(f'dsm corrected by {-diff_cols} columns.')
+
+    #print(f'dtm array shape: ({np1.shape[0],np1.shape[1]})')
+    #print(f'dsm array shape: ({np2.shape[0],np2.shape[1]})')
+
+    return np1,np2

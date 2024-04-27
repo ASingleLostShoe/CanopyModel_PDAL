@@ -6,9 +6,22 @@
 import tools
 from dotenv import load_dotenv
 import os
+
 def cm():
     load_dotenv()
     
+    chm_name = None
+    out_filepath = None
+    input_folderpath = None
+
+
+    debug_state = os.getenv("DEBUG")
+    if debug_state  == 'True':
+        chm_name = "test_chm.tif"
+        out_filepath = "/Users/pathall/Documents/CanopyModel_PDAL/Output"
+        input_folderpath = '/Users/pathall/Documents/CanopyModel_PDAL/LiDAR_multi_test'
+
+
     selection = 0
 
     while selection != 3:
@@ -46,8 +59,9 @@ def cm():
                 print('(3) exit program')
                 selection = 0
 
-        chm_name = input("Please enter name of output file (do not include extension): ") + '.tif'
-        print()
+        if chm_name == None:
+            chm_name = input("Please enter name of output file (do not include extension): ") + '.tif'
+            print()
 
         ## ADD ERROR HANDLING HERE ##
 
@@ -55,9 +69,13 @@ def cm():
             print("executing CHM creation for 1 file...")
             out_dtm,out_dsm,out_filepath = tools.execute_pl()
             tools.create_chm(out_dtm,out_dsm,out_filepath,out_name=chm_name)
+            selection = 0
 
         elif selection == 2:
-            file_list, file_count = tools.identify_li_files()
+            file_list, file_count = tools.identify_li_files(folderpath=input_folderpath)
+            if out_filepath == None:
+                out_filepath = r'{}'.format(input('Enter the path to the folde for output files: ').strip('"\''))
+            
             process_counter = 0
 
             if file_count == 0:
@@ -70,12 +88,21 @@ def cm():
 
             for file in file_list:
                 process_counter += 1
-                file_name = tools.chm_got_the_tif_bug(file)
+                file_name = str(os.path.basename(file))
+                file_name_tif_extension = tools.chm_got_the_tif_bug(file_name)
 
                 print(f'processing file {process_counter} of {file_count}.')
-                out_dtm, out_dsm, out_filepath = tools.execute_pl(lidar_filepath = file)
+                out_dtm, out_dsm, do_nothing = tools.execute_pl(lidar_filepath = file,out_filepath=out_filepath)
                 print()
-                tools.create_chm(out_dtm,out_dsm,out_filepath,out_name=file_name)
+                tools.create_chm(out_dtm,out_dsm,out_filepath,out_name=file_name_tif_extension)
+
+            print()
+            print(f'succesfully processed {file_count} files.')
+            selection = 0
+
+        elif selection == 3:
+            print("exit program.")
+            break
 
 
 

@@ -1,11 +1,12 @@
 ## Copyright Pat Hall, 2024. ##
-## Last Updated 04.25.24 ##
+## Last Updated 04.27.24 ##
 
-#this file creates a canopy height model using the tools defined in tools.py
+#this file creates a canopy height model using the functions defined in tools.py
 
 import tools
 from dotenv import load_dotenv
 import os
+import rasterio
 
 def cm():
     load_dotenv()
@@ -74,8 +75,8 @@ def cm():
         elif selection == 2:
             file_list, file_count = tools.identify_li_files(folderpath=input_folderpath)
             if out_filepath == None:
-                out_filepath = r'{}'.format(input('Enter the path to the folde for output files: ').strip('"\''))
-            
+                out_filepath = r'{}'.format(input('Enter the path to the folder for output files: ').strip('"\''))
+
             process_counter = 0
 
             if file_count == 0:
@@ -92,12 +93,23 @@ def cm():
                 file_name_tif_extension = tools.chm_got_the_tif_bug(file_name)
 
                 print(f'processing file {process_counter} of {file_count}.')
-                out_dtm, out_dsm, do_nothing = tools.execute_pl(lidar_filepath = file,out_filepath=out_filepath)
+                out_dtm, out_dsm, ignore_me = tools.execute_pl(lidar_filepath = file,out_filepath=out_filepath)
                 print()
                 tools.create_chm(out_dtm,out_dsm,out_filepath,out_name=file_name_tif_extension)
 
+            crs = (rasterio.open(out_dtm)).crs
+            os.remove(out_dtm)
+            os.remove(out_dsm)
+
             print()
             print(f'succesfully processed {file_count} files.')
+            print()
+            print(f'mosaicking {file_count} files...')
+            out_file_destination = os.path.join(out_filepath,chm_name)
+            tif_filelist = tools.identify_tif_files(out_filepath)
+            tools.merge_chm(tif_filelist,out_file_destination,crs)
+            print('mosaicking completed successfully.')
+
             selection = 0
 
         elif selection == 3:

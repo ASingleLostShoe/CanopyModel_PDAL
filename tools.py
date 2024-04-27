@@ -1,14 +1,17 @@
 ## Copyright by Pat Hall, 2024. ##
-## Last Updated 04.25.24 ##
+## Last Updated 04.27.24 ##
 
 #This file defines functions used in the main program.
 
 import json
 import pdal
 import rasterio
+from rasterio.merge import merge
 import numpy as np
 import matplotlib.pyplot as plt
 import os
+
+import rasterio.merge
 
 #opens specified JSON file containing the pdal pipeline and reads it into a python dictionary file
 #which can be executed elsewhere. "pl" stands for "pipeline".
@@ -150,6 +153,8 @@ def create_chm(dtm,dsm,out_filepath,out_name = None):
          dst.close
          print('raster file connection closed.')
 
+    
+
 #Returns a list of all files in a folder that use the .laz or .las extension.
 def identify_li_files(folderpath=None):
     if folderpath == None:
@@ -213,3 +218,56 @@ def check_array_sizes(np1,np2):
     #print(f'dsm array shape: ({np2.shape[0],np2.shape[1]})')
 
     return np1,np2
+
+#Creates a list of tif files in a directory. used for collating list of 
+#output CHM raster to be merged.
+def identify_tif_files(folderpath = None):
+    if folderpath == None:
+        folderpath = r'{}'.format(input('Enter the path to the folder with files for merging: ').strip('"\''))
+
+    
+    print(f'Compiling tif files at {folderpath}...')
+    #create list for filepaths to be appended to
+    tif_filelist = []
+
+    #for loop crawls files in directory at specified folder path. For any files that end with 
+    #'.laz' or '.las', the file path is appended to the filelist.
+    for file in os.listdir(folderpath):
+        if file.endswith('.tif'):
+            tif_filelist.append(os.path.join(folderpath,file))
+
+    file_count = len(tif_filelist)
+    
+    print(f'{file_count} files compiled for merge.')
+    print()
+
+    return tif_filelist
+
+#merges a list of raster files into a single raster, then writes out as GTiff to a 
+#specified destination.
+def merge_chm(chm_filelist,raster_destination,out_crs):
+    #create empty list for open raster objects
+    rasters_to_mosaic = []
+
+    #open all rasters in chm_fileist as open rasters using rasterio
+    for chm_raster in chm_filelist:
+        raster_open = rasterio.open(chm_raster)
+        rasters_to_mosaic.append(raster_open)
+
+    merged_chm, out_trans = merge(rasters_to_mosaic)
+
+    with rasterio.open(
+         raster_destination,
+         'w',
+         driver='GTiff',
+         height=merged_chm.shape[0],
+         width=merged_chm.shape[1],
+         count=1,
+         dtype=merged_chm.dtype,
+         crs=out_crs,
+         transform=out_trans
+    ) as dst:
+         dst.write(merged_chm)
+         print(f'{len(rasters_to_mosaic)} chm rasters successfully merged.')
+         dst.close
+         print('raster file connection closed.')

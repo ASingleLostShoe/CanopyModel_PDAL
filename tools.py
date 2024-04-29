@@ -10,7 +10,6 @@ from rasterio.merge import merge
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-
 import rasterio.merge
 
 #opens specified JSON file containing the pdal pipeline and reads it into a python dictionary file

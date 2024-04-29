@@ -256,12 +256,21 @@ def merge_chm(chm_filelist,raster_destination,out_crs):
 
     merged_chm, out_trans = merge(rasters_to_mosaic)
 
+    """
+    sqz_merged_chm = np.squeeze(merged_chm,axis=0)
+
+    print(sqz_merged_chm.shape[0],sqz_merged_chm.shape[1])
+    print(out_trans)
+    plt.imshow(sqz_merged_chm)
+    plt.show()
+    """
+    
     with rasterio.open(
          raster_destination,
          'w',
          driver='GTiff',
-         height=merged_chm.shape[0],
-         width=merged_chm.shape[1],
+         height=merged_chm.shape[1],
+         width=merged_chm.shape[2],
          count=1,
          dtype=merged_chm.dtype,
          crs=out_crs,
@@ -271,3 +280,4 @@ def merge_chm(chm_filelist,raster_destination,out_crs):
          print(f'{len(rasters_to_mosaic)} chm rasters successfully merged.')
          dst.close
          print('raster file connection closed.')
+    

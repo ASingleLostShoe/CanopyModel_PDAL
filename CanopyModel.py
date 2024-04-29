@@ -7,6 +7,7 @@ import tools
 from dotenv import load_dotenv
 import os
 import rasterio
+import time
 
 #cm() stands for CanopyModel. This function combines the functions from tools.py to create a program with commandline interaction.
 def cm():
@@ -78,6 +79,7 @@ def cm():
 
         ##PART 2: Single file CHM creation
         if selection == 1:
+
             print("executing CHM creation for 1 file...")
 
             #out_dtm and out_dsm are both .tif raster files. processes can be viewed in the JSON pipeline files

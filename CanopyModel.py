@@ -144,7 +144,7 @@ def cm():
             print()
             print(f'mosaicking {file_count} files...')
 
-            #joins final output name to filepath for megred chm
+            #joins final output name to filepath for merged chm
             out_file_destination = os.path.join(out_filepath,chm_name)
 
             #adds filepaths for all files to a list for merging.

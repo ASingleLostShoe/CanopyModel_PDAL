@@ -5,3 +5,6 @@ LiDAR_single_test/
 TombigbeeNF/
 Output/
 __pycache__/
+.gitignore
+.env
+StatTest.ipynb
